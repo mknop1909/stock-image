@@ -9,9 +9,9 @@ WIDTH  = 800
 HEIGHT = 480
 
 STOCKS = [
-    {"id": "OKLO",  "label": "OKLO",  "name": "Oklo Inc."},
-    {"id": "BRK.B", "label": "BRK.B", "name": "Berkshire B"},
-    {"id": "GOOGL", "label": "GOOGL", "name": "Alphabet"},
+    {"id": "OKLO",  "label": "OKLO"},
+    {"id": "BRK.B", "label": "BRK.B"},
+    {"id": "GOOGL",  "label": "GOOGL"},
 ]
 
 def get_quote(symbol, api_key):
@@ -21,7 +21,6 @@ def get_quote(symbol, api_key):
         "price":     d.get("c", 0),
         "change":    d.get("d", 0),
         "changePct": d.get("dp", 0),
-        "open":      d.get("o", 0),
         "high":      d.get("h", 0),
         "low":       d.get("l", 0),
     }
@@ -43,65 +42,53 @@ def generate_image(quotes):
 
     try:
         BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        REG  = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-        f_ticker = ImageFont.truetype(BOLD, 52)
-        f_price  = ImageFont.truetype(BOLD, 56)
-        f_change = ImageFont.truetype(BOLD, 30)
-        f_label  = ImageFont.truetype(BOLD, 24)
-        f_value  = ImageFont.truetype(BOLD, 28)
-        f_name   = ImageFont.truetype(REG,  22)
-        f_header = ImageFont.truetype(BOLD, 20)
+        f_ticker = ImageFont.truetype(BOLD, 72)
+        f_price  = ImageFont.truetype(BOLD, 64)
+        f_change = ImageFont.truetype(BOLD, 36)
+        f_label  = ImageFont.truetype(BOLD, 28)
+        f_value  = ImageFont.truetype(BOLD, 32)
     except:
-        f_ticker = f_price = f_change = f_label = f_value = f_name = f_header = ImageFont.load_default()
+        f_ticker = f_price = f_change = f_label = f_value = ImageFont.load_default()
 
-    # Zahlaví
-    draw.rectangle([0, 0, WIDTH, 44], fill="black")
-    draw.text((14, 10), "PREHLED AKCII", font=f_header, fill="white")
-    now = datetime.datetime.now().strftime("%d.%m.%Y  %H:%M")
-    draw.text((WIDTH - 210, 10), now, font=f_header, fill="white")
-
-    card_w = (WIDTH - 40) // 3   # ~253px
-    card_y = 50
-    card_h = HEIGHT - card_y - 4
-    margin = 10
+    # 3 sloupce, bez zahlaví – plná výška
+    col_w  = WIDTH // 3        # 266px
+    col_h  = HEIGHT            # 480px
 
     for i, s in enumerate(STOCKS):
-        cx = margin + i * (card_w + margin)
-        cy = card_y
+        cx = i * col_w
         q  = quotes.get(s["id"], {})
 
-        # Ramecek
-        draw.rectangle([cx, cy, cx + card_w, cy + card_h], outline="black", width=3)
+        # Svislý oddělovač
+        if i > 0:
+            draw.line([cx, 0, cx, HEIGHT], fill="black", width=3)
 
         # Ticker
-        draw.text((cx + 8, cy + 6), s["label"], font=f_ticker, fill="black")
+        draw.text((cx + 8, 4), s["label"], font=f_ticker, fill="black")
 
-        # Nazev firmy
-        draw.text((cx + 8, cy + 62), s["name"], font=f_name, fill="black")
-
-        # Oddelovac
-        draw.line([cx + 4, cy + 90, cx + card_w - 4, cy + 90], fill="black", width=2)
+        # Vodorovný oddělovač
+        draw.line([cx + 4, 80, cx + col_w - 4, 80], fill="black", width=2)
 
         # Cena
-        draw.text((cx + 8, cy + 96), fp(q.get("price")), font=f_price, fill="black")
+        draw.text((cx + 8, 86), fp(q.get("price")), font=f_price, fill="black")
 
         # Zmena
-        draw.text((cx + 8, cy + 158), fc(q.get("change"), q.get("changePct", 0)), font=f_change, fill="black")
+        draw.text((cx + 8, 158), fc(q.get("change"), q.get("changePct", 0)), font=f_change, fill="black")
 
         # Oddelovac
-        draw.line([cx + 4, cy + 196, cx + card_w - 4, cy + 196], fill="black", width=2)
+        draw.line([cx + 4, 202, cx + col_w - 4, 202], fill="black", width=2)
 
         # Max
-        draw.text((cx + 8,  cy + 204), "Max:", font=f_label, fill="black")
-        draw.text((cx + 8,  cy + 232), fp(q.get("high")), font=f_value, fill="black")
+        draw.text((cx + 8, 208), "Max:", font=f_label, fill="black")
+        draw.text((cx + 8, 240), fp(q.get("high")), font=f_value, fill="black")
 
         # Min
-        draw.text((cx + 8,  cy + 270), "Min:", font=f_label, fill="black")
-        draw.text((cx + 8,  cy + 298), fp(q.get("low")),  font=f_value, fill="black")
+        draw.text((cx + 8, 282), "Min:", font=f_label, fill="black")
+        draw.text((cx + 8, 314), fp(q.get("low")),  font=f_value, fill="black")
 
-        # Open
-        draw.text((cx + 8,  cy + 336), "Open:", font=f_label, fill="black")
-        draw.text((cx + 8,  cy + 364), fp(q.get("open")), font=f_value, fill="black")
+        # Datum vpravo dole v poslednim sloupci
+        if i == 2:
+            now = datetime.datetime.now().strftime("%d.%m.%Y  %H:%M")
+            draw.text((cx + 8, HEIGHT - 36), now, font=f_label, fill="black")
 
     return img
 
