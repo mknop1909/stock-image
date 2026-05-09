@@ -24,7 +24,6 @@ def get_quote(symbol, api_key):
         "open":      d.get("o", 0),
         "high":      d.get("h", 0),
         "low":       d.get("l", 0),
-        "prevClose": d.get("pc", 0),
     }
 
 def get_candles(symbol, api_key):
@@ -44,16 +43,16 @@ def draw_sparkline(draw, closes, x, y, w, h):
         return
     mn, mx = min(closes), max(closes)
     rng = mx - mn or 1
-    pad = 4
+    pad = 6
     pts = []
     for i, v in enumerate(closes):
         px = x + pad + int(i / (len(closes) - 1) * (w - pad * 2))
         py = y + h - pad - int((v - mn) / rng * (h - pad * 2))
         pts.append((px, py))
     for i in range(len(pts) - 1):
-        draw.line([pts[i], pts[i+1]], fill=0, width=3)
+        draw.line([pts[i], pts[i+1]], fill="black", width=4)
     lx, ly = pts[-1]
-    draw.ellipse([lx-4, ly-4, lx+4, ly+4], fill=0)
+    draw.ellipse([lx-5, ly-5, lx+5, ly+5], fill="black")
 
 def fp(n):
     if not n:
@@ -64,66 +63,80 @@ def fc(change, pct):
     if change is None:
         return "--"
     sign = "+" if change >= 0 else "-"
-    return f"{sign} ${abs(change):.2f} ({'+' if change >= 0 else ''}{pct:.2f}%)"
+    return f"{sign}${abs(change):.2f}  ({'+' if change >= 0 else ''}{pct:.1f}%)"
 
 def generate_image(quotes, candles):
-    img = Image.new("L", (WIDTH, HEIGHT), color=255)
+    # Ciste bila, rezim "1" = ciste cernobily bez antialiasingu
+    img = Image.new("RGB", (WIDTH, HEIGHT), color="white")
     draw = ImageDraw.Draw(img)
 
     try:
         BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_ticker = ImageFont.truetype(BOLD, 36)
-        font_price  = ImageFont.truetype(BOLD, 40)
-        font_change = ImageFont.truetype(BOLD, 20)
-        font_label  = ImageFont.truetype(BOLD, 16)
-        font_value  = ImageFont.truetype(BOLD, 18)
-        font_header = ImageFont.truetype(BOLD, 16)
+        f_ticker  = ImageFont.truetype(BOLD, 42)   # OKLO
+        f_price   = ImageFont.truetype(BOLD, 46)   # $12.34
+        f_change  = ImageFont.truetype(BOLD, 24)   # +1.23
+        f_label   = ImageFont.truetype(BOLD, 18)   # Max / Min
+        f_value   = ImageFont.truetype(BOLD, 22)   # hodnoty
+        f_header  = ImageFont.truetype(BOLD, 18)   # zahlaví
     except:
-        font_ticker = font_price = font_change = font_label = font_value = font_header = ImageFont.load_default()
+        f_ticker = f_price = f_change = f_label = f_value = f_header = ImageFont.load_default()
 
-    # Zahlaví
-    draw.rectangle([0, 0, WIDTH, 38], fill=0)
-    draw.text((14, 10), "PREHLED AKCII", font=font_header, fill=255)
-    now = datetime.datetime.now().strftime("%d.%m.%Y  %H:%M")
-    draw.text((WIDTH - 155, 10), now, font=font_header, fill=255)
+    BLACK = "black"
+    WHITE = "white"
 
-    card_w = (WIDTH - 40) // 3
-    card_y = 46
-    card_h = HEIGHT - card_y - 28
-    margin = 10
+    # ── Záhlaví ──────────────────────────────────────────────
+    draw.rectangle([0, 0, WIDTH, 42], fill=BLACK)
+    draw.text((14, 10), "AKCIE", font=f_header, fill=WHITE)
+    now = datetime.datetime.now().strftime("%d.%m.%Y   %H:%M")
+    draw.text((WIDTH - 200, 10), now, font=f_header, fill=WHITE)
+
+    # ── 3 karty ──────────────────────────────────────────────
+    card_w  = (WIDTH - 40) // 3   # 253px
+    card_y  = 50
+    card_h  = HEIGHT - card_y - 4
+    margin  = 10
 
     for i, s in enumerate(STOCKS):
         cx = margin + i * (card_w + margin)
         cy = card_y
-        q = quotes.get(s["id"], {})
+        q  = quotes.get(s["id"], {})
 
-        draw.rectangle([cx, cy, cx + card_w, cy + card_h], outline=0, width=3)
+        # Rámeček – silný
+        draw.rectangle([cx, cy, cx + card_w, cy + card_h], outline=BLACK, width=4)
 
-        draw.text((cx + 10, cy + 8),  s["label"], font=font_ticker, fill=0)
-        draw.text((cx + 10, cy + 50), s["name"],  font=font_label,  fill=60)
+        # Ticker – velký tučný
+        draw.text((cx + 10, cy + 8), s["label"], font=f_ticker, fill=BLACK)
 
-        draw.line([cx + 6, cy + 72, cx + card_w - 6, cy + 72], fill=0, width=2)
+        # Oddělovač
+        draw.line([cx + 4, cy + 58, cx + card_w - 4, cy + 58], fill=BLACK, width=3)
 
-        draw.text((cx + 10, cy + 78),  fp(q.get("price")), font=font_price,  fill=0)
-        draw.text((cx + 10, cy + 124), fc(q.get("change"), q.get("changePct", 0)), font=font_change, fill=0)
+        # Cena
+        draw.text((cx + 10, cy + 64), fp(q.get("price")), font=f_price, fill=BLACK)
 
-        draw.line([cx + 6, cy + 152, cx + card_w - 6, cy + 152], fill=100, width=1)
+        # Změna
+        draw.text((cx + 10, cy + 116), fc(q.get("change"), q.get("changePct", 0)), font=f_change, fill=BLACK)
 
-        draw.text((cx + 10, cy + 158), "Max:",      font=font_label, fill=80)
-        draw.text((cx + 60, cy + 158), fp(q.get("high")), font=font_value, fill=0)
+        # Oddělovač
+        draw.line([cx + 4, cy + 148, cx + card_w - 4, cy + 148], fill=BLACK, width=2)
 
-        draw.text((cx + 10, cy + 180), "Min:",      font=font_label, fill=80)
-        draw.text((cx + 60, cy + 180), fp(q.get("low")),  font=font_value, fill=0)
+        # Max
+        draw.text((cx + 10, cy + 154), "Max:", font=f_label, fill=BLACK)
+        draw.text((cx + 10, cy + 175), fp(q.get("high")), font=f_value, fill=BLACK)
 
-        draw.text((cx + 10, cy + 202), "Open:",     font=font_label, fill=80)
-        draw.text((cx + 75, cy + 202), fp(q.get("open")), font=font_value, fill=0)
+        # Min
+        draw.text((cx + card_w//2, cy + 154), "Min:", font=f_label, fill=BLACK)
+        draw.text((cx + card_w//2, cy + 175), fp(q.get("low")), font=f_value, fill=BLACK)
 
-        draw.line([cx + 6, cy + 226, cx + card_w - 6, cy + 226], fill=150, width=1)
+        # Open
+        draw.text((cx + 10, cy + 204), "Open:", font=f_label, fill=BLACK)
+        draw.text((cx + 10, cy + 225), fp(q.get("open")), font=f_value, fill=BLACK)
 
-        draw_sparkline(draw, candles.get(s["id"], []), cx + 8, cy + 230, card_w - 16, card_h - 234)
+        # Oddělovač před grafem
+        draw.line([cx + 4, cy + 252, cx + card_w - 4, cy + 252], fill=BLACK, width=2)
 
-    draw.line([0, HEIGHT - 24, WIDTH, HEIGHT - 24], fill=100, width=1)
-    draw.text((10, HEIGHT - 20), "Finnhub.io | zivyobraz.eu", font=font_label, fill=120)
+        # Sparkline
+        draw_sparkline(draw, candles.get(s["id"], []),
+                       cx + 6, cy + 256, card_w - 12, card_h - 260)
 
     return img
 
