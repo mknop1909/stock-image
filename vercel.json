@@ -1,5 +1,10 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/api/stocks" }
+  "functions": {
+    "api/app.py": {
+      "runtime": "vercel-python@3.0.7"
+    }
+  },
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/app.py" }
   ]
 }
